@@ -5,16 +5,18 @@
     "keywords": ["hotelsnl", "nagios", "plugin", "php"],
     "homepage": "https://github.com/Hotelsnl/nagios-plugins/",
     "license": "Apache-2.0",
-    "authors": [],
+    "authors": [
+        {
+            "name": "Arjan Schuurman",
+            "email": "arjan@hotels.nl"
+        }
+    ],
     "require": {
         "php": ">=5.3"
     },
-    "require-dev": {
-        "phpunit/phpunit": "3.7.37"
-    },
     "autoload": {
         "psr-4": {
-            "HotelsNL\\Nagios": "src"
+            "HotelsNL\\Nagios\\": "src"
         }
     }
 }
