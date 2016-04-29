@@ -1,0 +1,22 @@
+{
+    "name": "hotelsnl/nagios",
+    "type": "library",
+    "description": "Wrapper for creating Nagios plugins in PHP.",
+    "keywords": ["hotelsnl", "nagios", "plugin", "php"],
+    "homepage": "https://github.com/Hotelsnl/nagios-plugins/",
+    "license": "Apache-2.0",
+    "authors": [
+        {
+            "name": "Arjan Schuurman",
+            "email": "arjan@hotels.nl"
+        }
+    ],
+    "require": {
+        "php": ">=5.3"
+    },
+    "autoload": {
+        "psr-4": {
+            "HotelsNL\\Nagios\\": "src"
+        }
+    }
+}
