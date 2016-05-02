@@ -23,11 +23,11 @@ interface PluginInterface
     public function execute();
 
     /**
-     * Get the documentation string for the 'help' feature in the CLI.
+     * Get the help documentation.
      *
      * @return string
      */
-    public function getHelpDocumentation();
+    public function getHelp();
 
     /**
      * Get the version of the plugin.

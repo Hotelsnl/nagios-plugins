@@ -9,7 +9,6 @@
 namespace HotelsNL\Nagios\Plugin;
 
 use \HotelsNL\Nagios\Response\CliResponse;
-use \HotelsNL\Nagios\Response\NagiosResponse;
 use \HotelsNL\Nagios\Response\ResponseInterface;
 use \HotelsNL\Nagios\Plugin\Option\Option;
 
@@ -74,12 +73,12 @@ abstract class PluginAbstract implements PluginInterface
 
         if ($this->getOption('help')->getValue() !== false) {
             $rv = new CliResponse(
-                1,
+                ResponseInterface::EXIT_STATUS_SUCCESS,
                 $this->constructHelpDocumentation()
             );
         } elseif ($this->getOption('version')->getValue() !== false) {
             $rv = new CliResponse(
-                1,
+                ResponseInterface::EXIT_STATUS_SUCCESS,
                 $this->constructVersionInformation()
             );
         } else {
@@ -116,6 +115,8 @@ abstract class PluginAbstract implements PluginInterface
         if (is_int($verboseOption->getValue())) {
             $this->setVerbosityLevel($verboseOption->getValue());
         }
+
+        //
     }
 
     /**
@@ -172,7 +173,7 @@ abstract class PluginAbstract implements PluginInterface
             $options[$parameters] = $option->getDescription();
         }
 
-        $rv = $this->getHelpDocumentation() . "\n";
+        $rv = $this->constructPluginHelpDocumentation() . "\n";
         $rv .= "\n";
         $rv .= "OPTIONS:\n";
 
@@ -186,6 +187,25 @@ abstract class PluginAbstract implements PluginInterface
         }
 
         return $rv;
+    }
+
+    /**
+     * Construct the help documentation for the plugin.
+     *
+     * MUST contains a brief explanation about the plugin for the help section.
+     *
+     * @return string
+     */
+    abstract protected function constructPluginHelpDocumentation();
+
+    /**
+     * Get the help documentation.
+     *
+     * @return string
+     */
+    public function getHelp()
+    {
+        return $this->constructHelpDocumentation();
     }
 
     /**
@@ -357,7 +377,7 @@ abstract class PluginAbstract implements PluginInterface
      * @return Option
      * @throws \InvalidArgumentException When $option does not exist.
      */
-    private function getOption($option)
+    protected function getOption($option)
     {
         $shortOption = $option;
 
@@ -455,7 +475,7 @@ abstract class PluginAbstract implements PluginInterface
      * @return int
      * @throws \LogicException When verbosityLevel is not set.
      */
-    public function getVerbosityLevel()
+    protected function getVerbosityLevel()
     {
         if (!isset($this->verbosityLevel)) {
             throw new \LogicException('VerbosityLevel is not set.');
@@ -473,7 +493,12 @@ abstract class PluginAbstract implements PluginInterface
      */
     private function setVerbosityLevel($verbosityLevel)
     {
-        if (!is_int($verbosityLevel)) {
+        $range = range(
+            static::VERBOSITY_LEVEL_MINIMUM,
+            static::VERBOSITY_LEVEL_MAXIMUM
+        );
+
+        if (!is_int($verbosityLevel) || !in_array($verbosityLevel, $range)) {
             throw new \InvalidArgumentException(
                 'Invalid verbosityLevel supplied: '
                 . var_export($verbosityLevel, true)
