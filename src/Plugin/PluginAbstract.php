@@ -131,6 +131,7 @@ abstract class PluginAbstract implements PluginInterface
 
         foreach ($this->getOptions() as $option) {
             $shortOptions .= $option->getShortOption();
+            $shortOptions .= str_repeat(':', $option->getMode() - 1);
             $longOption = $option->getLongOption();
 
             if (!empty($longOption)) {
