@@ -8,8 +8,6 @@
 
 namespace HotelsNL\Nagios\Plugin;
 
-use \HotelsNL\Nagios\Plugin\Threshold\PercentageThreshold;
-use \HotelsNL\Nagios\Plugin\Threshold\RangeThreshold;
 use \HotelsNL\Nagios\Plugin\Threshold\ThresholdInterface;
 use \HotelsNL\Nagios\Response\CliResponse;
 use \HotelsNL\Nagios\Response\ResponseInterface;
@@ -75,7 +73,7 @@ abstract class PluginAbstract implements PluginInterface
      *
      * @var int $verbosityLevel
      */
-    private $verbosityLevel = 0;
+    private $verbosityLevel = self::VERBOSITY_LEVEL_MINIMUM;
 
     /**
      * The thresholds to mark a check as a warning.
@@ -244,7 +242,7 @@ abstract class PluginAbstract implements PluginInterface
 
         if ($warningOption->getValue() !== false) {
             $this->setWarningThresholds(
-                $this->parseThresholdOption($warningOption->getValue())
+                Option::parseThresholdValue($warningOption->getValue())
             );
         } else {
             $defaultThresholds = $this->getDefaultWarningThresholds();
@@ -259,7 +257,7 @@ abstract class PluginAbstract implements PluginInterface
 
         if ($criticalOption->getValue() !== false) {
             $this->setCriticalThresholds(
-                $this->parseThresholdOption($criticalOption->getValue())
+                Option::parseThresholdValue($criticalOption->getValue())
             );
         } else {
             $defaultThresholds = $this->getDefaultCriticalThresholds();
@@ -300,76 +298,10 @@ abstract class PluginAbstract implements PluginInterface
                 } else {
                     $value = 1;
                 }
-            } else {
-                $value = $this->parseOptionDataType($value);
             }
 
             $option->setValue($value);
         }
-    }
-
-    /**
-     * Parse the data type of an option value, cast if necessary.
-     *
-     * @param mixed $value
-     * @return mixed
-     */
-    private function parseOptionDataType($value)
-    {
-        if (is_array($value)) {
-            foreach ($value as &$subValue) {
-                $subValue = $this->parseOptionDataType($subValue);
-            }
-        } elseif (preg_match('/^\d$/', $value)) {
-            $value = (int) $value;
-        } elseif (preg_match('/^\d\.\d$/', $value)) {
-            $value = (float) $value;
-        }
-
-        return $value;
-    }
-
-    /**
-     * Parse a value of the option which represents a threshold.
-     *
-     * @param array|string $value
-     * @return ThresholdInterface[]
-     * @throws \RuntimeException When a threshold is invalid.
-     */
-    private function parseThresholdOption($value)
-    {
-        $thresholdValues = array();
-
-        // Create an array with 1 threshold.
-        if (!is_array($value)) {
-            $value = array($value);
-        }
-
-        // Split multiple thresholds separated by a comma.
-        foreach ($value as $subValue) {
-            $thresholdValues = array_merge(
-                $thresholdValues,
-                explode(',', $subValue)
-            );
-        }
-
-        $thresholds = array();
-
-        // Create threshold instances.
-        foreach ($thresholdValues as $thresholdValue) {
-            if (PercentageThreshold::isValidThreshold($thresholdValue)) {
-                array_push($thresholds, new PercentageThreshold($thresholdValue));
-            } elseif (RangeThreshold::isValidThreshold($thresholdValue)) {
-                array_push($thresholds, new RangeThreshold($thresholdValue));
-            } else {
-                throw new \RuntimeException(
-                    'Invalid threshold supplied: '
-                    . var_export($thresholdValue, true)
-                );
-            }
-        }
-
-        return $thresholds;
     }
 
     /**

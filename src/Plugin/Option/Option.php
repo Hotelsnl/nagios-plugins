@@ -8,6 +8,10 @@
 
 namespace HotelsNL\Nagios\Plugin\Option;
 
+use \HotelsNL\Nagios\Plugin\Threshold\PercentageThreshold;
+use \HotelsNL\Nagios\Plugin\Threshold\RangeThreshold;
+use \HotelsNL\Nagios\Plugin\Threshold\ThresholdInterface;
+
 /**
  * The class which represents an option which can be supplied through the
  * command line.
@@ -84,6 +88,70 @@ class Option
         $this->setDescription($description);
         $this->setMode($mode);
         $this->setLongOption($longOption);
+    }
+
+    /**
+     * Parse the value of a threshold and create a ThresholdInterface.
+     *
+     * @param array|string $value
+     * @return ThresholdInterface[]
+     * @throws \RuntimeException When a threshold is invalid.
+     */
+    public static function parseThresholdValue($value)
+    {
+        $thresholdValues = array();
+
+        // Create an array with 1 threshold.
+        if (!is_array($value)) {
+            $value = array($value);
+        }
+
+        // Split multiple thresholds separated by a comma.
+        foreach ($value as $subValue) {
+            $thresholdValues = array_merge(
+                $thresholdValues,
+                explode(',', $subValue)
+            );
+        }
+
+        $thresholds = array();
+
+        // Create threshold instances.
+        foreach ($thresholdValues as $thresholdValue) {
+            if (PercentageThreshold::isValidThreshold($thresholdValue)) {
+                array_push($thresholds, new PercentageThreshold($thresholdValue));
+            } elseif (RangeThreshold::isValidThreshold($thresholdValue)) {
+                array_push($thresholds, new RangeThreshold($thresholdValue));
+            } else {
+                throw new \RuntimeException(
+                    'Invalid threshold supplied: '
+                    . var_export($thresholdValue, true)
+                );
+            }
+        }
+
+        return $thresholds;
+    }
+
+    /**
+     * Parse the the value of the option.
+     *
+     * @param mixed $value
+     * @return mixed
+     */
+    private function parseValue($value)
+    {
+        if (is_array($value)) {
+            foreach ($value as &$subValue) {
+                $subValue = $this->parseValue($subValue);
+            }
+        } elseif (preg_match('/^\d$/', $value)) {
+            $value = (int) $value;
+        } elseif (preg_match('/^\d\.\d$/', $value)) {
+            $value = (float) $value;
+        }
+
+        return $value;
     }
 
     /**
@@ -255,7 +323,7 @@ class Option
      */
     public function setValue($value)
     {
-        $this->value = $value;
+        $this->value = $this->parseValue($value);
 
         return $this;
     }
