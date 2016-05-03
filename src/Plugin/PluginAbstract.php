@@ -8,6 +8,9 @@
 
 namespace HotelsNL\Nagios\Plugin;
 
+use HotelsNL\Nagios\Plugin\Threshold\PercentageThreshold;
+use HotelsNL\Nagios\Plugin\Threshold\RangeThreshold;
+use \HotelsNL\Nagios\Plugin\Threshold\ThresholdInterface;
 use \HotelsNL\Nagios\Response\CliResponse;
 use \HotelsNL\Nagios\Response\ResponseInterface;
 use \HotelsNL\Nagios\Plugin\Option\Option;
@@ -32,6 +35,20 @@ abstract class PluginAbstract implements PluginInterface
     const VERBOSITY_LEVEL_MAXIMUM = 3;
 
     /**
+     * The thresholds to mark a check as critical.
+     *
+     * @var ThresholdInterface[] $criticalThresholds
+     */
+    private $criticalThresholds = array();
+
+    /**
+     * The hostname which should be checked.
+     *
+     * @var string|null $hostname
+     */
+    private $hostname;
+
+    /**
      * The options registered for this plugin.
      *
      * @var Option[] $options
@@ -46,6 +63,14 @@ abstract class PluginAbstract implements PluginInterface
     private $optionAliases = array();
 
     /**
+     * The timeout in seconds which the plugin should take in account for
+     * execution.
+     *
+     * @var int $timeout
+     */
+    private $timeout = 5;
+
+    /**
      * The level of verbosity, range 0 - 3.
      *
      * @var int $verbosityLevel
@@ -53,103 +78,18 @@ abstract class PluginAbstract implements PluginInterface
     private $verbosityLevel = 0;
 
     /**
+     * The thresholds to mark a check as a warning.
+     *
+     * @var ThresholdInterface[] $warningThresholds
+     */
+    private $warningThresholds = array();
+
+    /**
      * Initialize a new PluginAbstract.
      */
     final public function __construct()
     {
         $this->registerOptions();
-    }
-
-    /**
-     * Execute the Nagios plugin and return a result.
-     *
-     * @return ResponseInterface
-     */
-    public function execute()
-    {
-        $this->parseOptions();
-
-        $this->handleOptions();
-
-        if ($this->getOption('help')->getValue() !== false) {
-            $rv = new CliResponse(
-                ResponseInterface::EXIT_STATUS_SUCCESS,
-                $this->constructHelpDocumentation()
-            );
-        } elseif ($this->getOption('version')->getValue() !== false) {
-            $rv = new CliResponse(
-                ResponseInterface::EXIT_STATUS_SUCCESS,
-                $this->constructVersionInformation()
-            );
-        } else {
-            $pluginResponse = $this->executePlugin();
-
-            if (!($pluginResponse instanceof ResponseInterface)) {
-                throw new \RuntimeException(
-                    'Expected the plugin to return a ResponseInterface, got: '
-                    . get_class($pluginResponse)
-                );
-            }
-
-            $rv = $pluginResponse;
-        }
-
-        return $rv;
-    }
-
-    /**
-     * Execute the plugin, returns the response of the check.
-     *
-     * @return ResponseInterface
-     */
-    abstract protected function executePlugin();
-
-    /**
-     * Handle the options internally.
-     */
-    private function handleOptions()
-    {
-        // Handle verbosity.
-        $verboseOption = $this->getOption('verbose');
-
-        if (is_int($verboseOption->getValue())) {
-            $this->setVerbosityLevel($verboseOption->getValue());
-        }
-
-        //
-    }
-
-    /**
-     * Parse the command line options.
-     *
-     * @return void
-     */
-    private function parseOptions()
-    {
-        $shortOptions = '';
-        $longOptions = array();
-
-        foreach ($this->getOptions() as $option) {
-            $shortOptions .= $option->getShortOption();
-            $shortOptions .= str_repeat(':', $option->getMode() - 1);
-            $longOption = $option->getLongOption();
-
-            if (!empty($longOption)) {
-                array_push($longOptions, $longOption);
-            }
-        }
-
-        foreach (getopt($shortOptions, $longOptions) as $option => $value) {
-            $option = $this->getOption($option);
-
-            if (is_array($value)) {
-                $value = count($value);
-            } elseif ($option->getMode() === Option::MODE_NO_VALUE) {
-                $value = 1;
-            }
-
-            $option->setValue($value);
-        }
     }
 
     /**
@@ -200,16 +140,6 @@ abstract class PluginAbstract implements PluginInterface
     abstract protected function constructPluginHelpDocumentation();
 
     /**
-     * Get the help documentation.
-     *
-     * @return string
-     */
-    public function getHelp()
-    {
-        return $this->constructHelpDocumentation();
-    }
-
-    /**
      * Construct the information about the version of this plugin.
      *
      * @return string
@@ -219,6 +149,227 @@ abstract class PluginAbstract implements PluginInterface
         $scriptName = array_pop(explode('/', $_SERVER['SCRIPT_FILENAME']));
 
         return "{$scriptName}, version: {$this->getVersion()}\n";
+    }
+
+    /**
+     * Execute the Nagios plugin and return a result.
+     *
+     * @return ResponseInterface
+     */
+    public function execute()
+    {
+        $this->parseOptions();
+
+        $this->handleOptions();
+
+        if ($this->getOption('help')->getValue() !== false) {
+            $rv = new CliResponse(
+                ResponseInterface::EXIT_STATUS_SUCCESS,
+                $this->constructHelpDocumentation()
+            );
+        } elseif ($this->getOption('version')->getValue() !== false) {
+            $rv = new CliResponse(
+                ResponseInterface::EXIT_STATUS_SUCCESS,
+                $this->constructVersionInformation()
+            );
+        } else {
+            $pluginResponse = $this->executePlugin();
+
+            if (!($pluginResponse instanceof ResponseInterface)) {
+                throw new \RuntimeException(
+                    'Expected the plugin to return a ResponseInterface, got: '
+                    . get_class($pluginResponse)
+                );
+            }
+
+            $rv = $pluginResponse;
+        }
+
+        return $rv;
+    }
+
+    /**
+     * Execute the plugin, returns the response of the check.
+     *
+     * @return ResponseInterface
+     */
+    abstract protected function executePlugin();
+
+    /**
+     * Get the default thresholds to mark a check as critical.
+     *
+     * Supply NULL for no default value, otherwise an array of thresholds.
+     *
+     * @return null|ThresholdInterface[]
+     */
+    abstract protected function getDefaultCriticalThresholds();
+
+    /**
+     * Get the default thresholds to mark a check as a warning.
+     *
+     * Supply NULL for no default value, otherwise an array of thresholds.
+     *
+     * @return null|ThresholdInterface[]
+     */
+    abstract protected function getDefaultWarningThresholds();
+
+    /**
+     * Handle the options internally.
+     */
+    private function handleOptions()
+    {
+        // Verbosity.
+        $verboseOption = $this->getOption('verbose');
+
+        if (is_int($verboseOption->getValue())) {
+            $this->setVerbosityLevel($verboseOption->getValue());
+        }
+
+        // Hostname.
+        $hostnameOption = $this->getOption('hostname');
+
+        if (is_string($hostnameOption->getValue())) {
+            $this->setHostname($hostnameOption->getValue());
+        }
+
+        // Timeout.
+        $timeoutOption = $this->getOption('timeout');
+
+        if (is_int($timeoutOption->getValue())) {
+            $this->setTimeout($timeoutOption->getValue());
+        }
+
+        // Warning thresholds.
+        $warningOption = $this->getOption('warning');
+
+        if ($warningOption->getValue() !== false) {
+            $this->setWarningThresholds(
+                $this->parseThresholdOption($warningOption->getValue())
+            );
+        } else {
+            $defaultThresholds = $this->getDefaultWarningThresholds();
+
+            if (is_array($defaultThresholds)) {
+                $this->setWarningThresholds($defaultThresholds);
+            }
+        }
+
+        // Critical thresholds.
+        $criticalOption = $this->getOption('critical');
+
+        if ($criticalOption->getValue() !== false) {
+            $this->setCriticalThresholds(
+                $this->parseThresholdOption($criticalOption->getValue())
+            );
+        } else {
+            $defaultThresholds = $this->getDefaultCriticalThresholds();
+
+            if (is_array($defaultThresholds)) {
+                $this->setCriticalThresholds($defaultThresholds);
+            }
+        }
+    }
+
+    /**
+     * Parse the command line options.
+     *
+     * @return void
+     */
+    private function parseOptions()
+    {
+        $shortOptions = '';
+        $longOptions = array();
+
+        foreach ($this->getOptions() as $option) {
+            $shortOptions .= $option->getShortOption();
+            $shortOptions .= str_repeat(':', $option->getMode() - 1);
+            $longOption = $option->getLongOption();
+
+            if (!empty($longOption)) {
+                array_push($longOptions, $longOption);
+            }
+        }
+
+        foreach (getopt($shortOptions, $longOptions) as $option => $value) {
+            $option = $this->getOption($option);
+
+            if ($option->getMode() === Option::MODE_NO_VALUE) {
+                // Handle 'no value' correctly by counting them.
+                if (is_array($value)) {
+                    $value = count($value);
+                } else {
+                    $value = 1;
+                }
+            } else {
+                $value = $this->parseOptionDataType($value);
+            }
+
+            $option->setValue($value);
+        }
+    }
+
+    /**
+     * Parse the data type of an option value, cast if necessary.
+     *
+     * @param mixed $value
+     * @return mixed
+     */
+    private function parseOptionDataType($value)
+    {
+        if (is_array($value)) {
+            foreach ($value as &$subValue) {
+                $subValue = $this->parseOptionDataType($subValue);
+            }
+        } elseif (preg_match('/^\d$/', $value)) {
+            $value = (int) $value;
+        } elseif (preg_match('/^\d\.\d$/', $value)) {
+            $value = (float) $value;
+        }
+
+        return $value;
+    }
+
+    /**
+     * Parse a value of the option which represents a threshold.
+     *
+     * @param array|string $value
+     * @return ThresholdInterface[]
+     * @throws \RuntimeException When a threshold is invalid.
+     */
+    private function parseThresholdOption($value)
+    {
+        $thresholdValues = array();
+
+        // Create an array with 1 threshold.
+        if (!is_array($value)) {
+            $value = array($value);
+        }
+
+        // Split multiple thresholds separated by a comma.
+        foreach ($value as $subValue) {
+            $thresholdValues = array_merge(
+                $thresholdValues,
+                explode(',', $subValue)
+            );
+        }
+
+        $thresholds = array();
+
+        // Create threshold instances.
+        foreach ($thresholdValues as $thresholdValue) {
+            if (PercentageThreshold::isValidThreshold($thresholdValue)) {
+                array_push($thresholds, new PercentageThreshold($thresholdValue));
+            } elseif (RangeThreshold::isValidThreshold($thresholdValue)) {
+                array_push($thresholds, new RangeThreshold($thresholdValue));
+            } else {
+                throw new \RuntimeException(
+                    'Invalid threshold supplied: '
+                    . var_export($thresholdValue, true)
+                );
+            }
+        }
+
+        return $thresholds;
     }
 
     /**
@@ -372,6 +523,84 @@ abstract class PluginAbstract implements PluginInterface
     abstract protected function registerPluginOptions();
 
     /**
+     * Get the thresholds to mark a check as critical.
+     *
+     * @return ThresholdInterface[]
+     * @throws \LogicException When criticalThresholds is not set.
+     */
+    protected function getCriticalThresholds()
+    {
+        if (!isset($this->criticalThresholds)) {
+            throw new \LogicException('criticalThresholds is not set.');
+        }
+
+        return $this->criticalThresholds;
+    }
+
+    /**
+     * Set the thresholds to mark a check as critical.
+     *
+     * @param ThresholdInterface[] $criticalThresholds
+     * @return static
+     * @throws \InvalidArgumentException When a threshold is not an instance of
+     *  ThresholdInterface.
+     */
+    private function setCriticalThresholds(array $criticalThresholds)
+    {
+        foreach ($criticalThresholds as $threshold) {
+            if (!($threshold instanceof ThresholdInterface)) {
+                throw new \InvalidArgumentException(
+                    'Expected threshold to be an instanceof ThresholdInterface, '
+                    . 'got: ' . get_class($threshold)
+                );
+            }
+        }
+
+        $this->criticalThresholds = $criticalThresholds;
+
+        return $this;
+    }
+
+    /**
+     * Get the help documentation.
+     *
+     * @return string
+     */
+    public function getHelp()
+    {
+        return $this->constructHelpDocumentation();
+    }
+
+    /**
+     * Get the hostname which should be checked.
+     *
+     * @return null|string
+     */
+    public function getHostname()
+    {
+        return $this->hostname;
+    }
+
+    /**
+     * Set the hostname which should be checked.
+     *
+     * @param null|string $hostname
+     * @return static
+     */
+    public function setHostname($hostname)
+    {
+        if (!is_string($hostname) && $hostname !== null) {
+            throw new \InvalidArgumentException(
+                'Invalid hostname supplied, got: ' . var_export($hostname, true)
+            );
+        }
+
+        $this->hostname = $hostname;
+
+        return $this;
+    }
+
+    /**
      * Get an option by its short name or long name.
      *
      * @param string $option
@@ -471,6 +700,43 @@ abstract class PluginAbstract implements PluginInterface
     }
 
     /**
+     * Get the timeout in seconds which the plugin should take in account for
+     * execution.
+     *
+     * @return int
+     * @throws \LogicException When timeout is not set.
+     */
+    protected function getTimeout()
+    {
+        if (!isset($this->timeout)) {
+            throw new \LogicException('Timeout is not set.');
+        }
+
+        return $this->timeout;
+    }
+
+    /**
+     * Set the timeout in seconds which the plugin should take in account for
+     * execution.
+     *
+     * @param int $timeout
+     * @return static
+     * @throws \InvalidArgumentException When $timeout is not of type int.
+     */
+    private function setTimeout($timeout)
+    {
+        if (!is_int($timeout)) {
+            throw new \InvalidArgumentException(
+                'Invalid timeout supplied: ' . var_export($timeout, true)
+            );
+        }
+
+        $this->timeout = $timeout;
+
+        return $this;
+    }
+
+    /**
      * Get the level of verbosity.
      *
      * @return int
@@ -507,6 +773,45 @@ abstract class PluginAbstract implements PluginInterface
         }
 
         $this->verbosityLevel = $verbosityLevel;
+
+        return $this;
+    }
+
+    /**
+     * Get the thresholds to mark a check as a warning.
+     *
+     * @return ThresholdInterface[]
+     * @throws \LogicException When warningThresholds is not set.
+     */
+    protected function getWarningThresholds()
+    {
+        if (!isset($this->warningThresholds)) {
+            throw new \LogicException('WarningThresholds is not set.');
+        }
+
+        return $this->warningThresholds;
+    }
+
+    /**
+     * Set the thresholds to mark a check as a warning.
+     *
+     * @param ThresholdInterface[] $warningThresholds
+     * @return static
+     * @throws \InvalidArgumentException When a threshold is not an instance of
+     *  ThresholdInterface.
+     */
+    private function setWarningThresholds(array $warningThresholds)
+    {
+        foreach ($warningThresholds as $threshold) {
+            if (!($threshold instanceof ThresholdInterface)) {
+                throw new \InvalidArgumentException(
+                    'Expected threshold to be an instanceof ThresholdInterface, '
+                    . 'got: ' . get_class($threshold)
+                );
+            }
+        }
+
+        $this->warningThresholds = $warningThresholds;
 
         return $this;
     }

@@ -66,7 +66,7 @@ class CliResponse extends ResponseAbstract
      * Set the output which is send to STDOUT.
      *
      * @param string $output
-     * @return Response
+     * @return static
      * @throws \InvalidArgumentException When $output is not of type string.
      */
     private function setOutput($output)

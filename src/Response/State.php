@@ -113,7 +113,7 @@ class State
     {
         $stateTexts = static::getStateTexts();
 
-        if (!in_array($code, $stateTexts, true)) {
+        if (!in_array($code, array_keys($stateTexts), true)) {
             throw new \InvalidArgumentException(
                 'Invalid code supplied: ' . var_export($code, true)
             );

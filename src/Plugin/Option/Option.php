@@ -66,7 +66,7 @@ class Option
     /**
      * The value of the option.
      *
-     * @var bool|string|int $value
+     * @var mixed $value
      */
     private $value = false;
 
@@ -240,33 +240,21 @@ class Option
     /**
      * Get the value of the option.
      *
-     * @return bool|int|string
-     * @throws \LogicException When value is not set.
+     * @return mixed
      */
     public function getValue()
     {
-        if (!isset($this->value)) {
-            throw new \LogicException('Value is not set.');
-        }
-
         return $this->value;
     }
 
     /**
      * Set the value of the option.
      *
-     * @param bool|int|string $value
+     * @param mixed $value
      * @return Option
-     * @throws \InvalidArgumentException When an invalid value is supplied.
      */
     public function setValue($value)
     {
-        if (!is_string($value) && !is_int($value) && !is_bool($value)) {
-            throw new \InvalidArgumentException(
-                'Invalid value supplied: ' . var_export($value, true)
-            );
-        }
-
         $this->value = $value;
 
         return $this;

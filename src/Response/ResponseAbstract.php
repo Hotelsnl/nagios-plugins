@@ -11,7 +11,7 @@ namespace HotelsNL\Nagios\Response;
 /**
  * The class which represents an abstract of a response.
  */
-abstract class ResponseAbstract
+abstract class ResponseAbstract implements ResponseInterface
 {
     /**
      * The exit status of the response.
@@ -21,7 +21,7 @@ abstract class ResponseAbstract
     private $exitStatus;
 
     /**
-     * Initialize a new ResponseAbstract
+     * Initialize a new ResponseAbstract.
      *
      * @param int $exitStatus
      */
