@@ -8,8 +8,8 @@
 
 namespace HotelsNL\Nagios\Plugin;
 
-use HotelsNL\Nagios\Plugin\Threshold\PercentageThreshold;
-use HotelsNL\Nagios\Plugin\Threshold\RangeThreshold;
+use \HotelsNL\Nagios\Plugin\Threshold\PercentageThreshold;
+use \HotelsNL\Nagios\Plugin\Threshold\RangeThreshold;
 use \HotelsNL\Nagios\Plugin\Threshold\ThresholdInterface;
 use \HotelsNL\Nagios\Response\CliResponse;
 use \HotelsNL\Nagios\Response\ResponseInterface;

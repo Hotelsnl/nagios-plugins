@@ -223,7 +223,7 @@ class Option
     {
         if (!is_string($shortOption)) {
             throw new \InvalidArgumentException(
-                'Invalid shortOption supplied: ' . export($shortOption, true)
+                'Invalid shortOption supplied: ' . var_export($shortOption, true)
             );
         } elseif (strlen($shortOption) !== 1) {
             throw new \InvalidArgumentException(
