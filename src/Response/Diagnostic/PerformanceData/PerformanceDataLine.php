@@ -112,7 +112,7 @@ class PerformanceDataLine
                 );
             }
 
-            $value = $matches[0];
+            $value = $matches[1];
 
             // Set the value.
             if (strpos($value, '.') >= 0) {
@@ -122,8 +122,8 @@ class PerformanceDataLine
             }
 
             // Set the unit of measurement.
-            if (count($matches) === 2) {
-                $uom = $matches[1];
+            if (count($matches) === 3) {
+                $uom = $matches[2];
 
                 $allowedUnits = array_map(
                     'strtolower',
@@ -165,9 +165,9 @@ class PerformanceDataLine
         $warning = ($warning === null) ? 'null' : $warning;
         $critical = ($critical === null) ? 'null' : $critical;
 
-        // Not necessary for percentags to supply a min and max.
-        $min = ($uom === '%') ? static::VALUE_UNKNOWN : $min;
-        $max = ($uom === '%') ? static::VALUE_UNKNOWN : $max;
+        // Not necessary for percentages to supply a min and max.
+        $min = ($uom === '%' || $uom === '') ? static::VALUE_UNKNOWN : $min;
+        $max = ($uom === '%' || $uom === '') ? static::VALUE_UNKNOWN : $max;
 
         return "'{$label}'={$value}{$uom};{$warning};{$critical};{$min};{$max}";
     }

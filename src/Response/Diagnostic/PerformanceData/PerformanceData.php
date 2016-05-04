@@ -31,6 +31,34 @@ class PerformanceData
     }
 
     /**
+     * Add a performance data line conveniently.
+     *
+     * @param string $label
+     * @param int|float|string $valueWithUnit
+     * @param null|int|float $warning
+     * @param null|int|float $critical
+     * @param int|float $minimum
+     * @param int|float $maximum
+     * @return PerformanceData
+     */
+    public function add(
+        $label,
+        $valueWithUnit,
+        $warning = null,
+        $critical = null,
+        $minimum = 0,
+        $maximum = 100
+    ) {
+        $line = new PerformanceDataLine($label, $valueWithUnit, $minimum, $maximum);
+        $line->setWarning($warning);
+        $line->setCritical($critical);
+
+        $this->addLine($line);
+
+        return $this;
+    }
+
+    /**
      * Add a performance data line.
      *
      * @param PerformanceDataLine $line

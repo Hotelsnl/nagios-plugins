@@ -71,12 +71,15 @@ class Diagnostic
      *
      * @param string $longServiceOutput
      * @return Diagnostic
-     * @throws \InvalidArgumentException When $longServiceOutput is not of type
-     *  string.
+     * @throws \InvalidArgumentException When $longServiceOutput is invalid.
      */
     public function setLongServiceOutput($longServiceOutput)
     {
-        if (!is_string($longServiceOutput)) {
+        $pattern = '/^[^|]*$/';
+
+        if (!is_string($longServiceOutput)
+            || preg_match($pattern, $longServiceOutput) !== 1
+        ) {
             throw new \InvalidArgumentException(
                 'Invalid longServiceOutput supplied: '
                 . var_export($longServiceOutput, true)

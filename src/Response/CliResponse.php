@@ -42,7 +42,7 @@ class CliResponse extends ResponseAbstract
      */
     public function execute()
     {
-        fwrite(STDOUT, $this->getOutput());
+        $this->write($this->getOutput());
 
         parent::execute();
     }

@@ -43,6 +43,16 @@ abstract class ResponseAbstract implements ResponseInterface
     }
 
     /**
+     * Write text to STDOUT.
+     *
+     * @param string $string
+     */
+    protected function write($string)
+    {
+        fwrite(STDOUT, "{$string}");
+    }
+
+    /**
      * Get the exit status of the response.
      *
      * @return int
