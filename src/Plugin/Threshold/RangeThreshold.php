@@ -54,11 +54,11 @@ class RangeThreshold implements ThresholdInterface
     /**
      * Initialize a new RangeThreshold.
      *
-     * @param string $range
+     * @param mixed $range
      */
     public function __construct($range)
     {
-        $this->parseRange($range);
+        $this->parseRange((string) $range);
     }
 
     /**
@@ -88,7 +88,7 @@ class RangeThreshold implements ThresholdInterface
      */
     public static function isValidThreshold($threshold)
     {
-        $pattern = '/^@?(~|\d)(:\d?)?$/';
+        $pattern = '/^@?(~|\d+)(:(\d+)?)?$/';
 
         return preg_match($pattern, $threshold) === 1;
     }
