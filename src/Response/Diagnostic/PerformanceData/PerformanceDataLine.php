@@ -14,11 +14,11 @@ namespace HotelsNL\Nagios\Response\Diagnostic\PerformanceData;
 class PerformanceDataLine
 {
     /**
-     * The unit of measurement for 'unknown'.
+     * The value for 'unknown'.
      *
-     * @var string UOM_UNKNOWN
+     * @var string VALUE_UNKNOWN
      */
-    const UOM_UNKNOWN = 'U';
+    const VALUE_UNKNOWN = 'U';
 
     /**
      * The threshold value considered as critical (without unit of measurement).
@@ -58,7 +58,9 @@ class PerformanceDataLine
     /**
      * The value of the measured performance data line.
      *
-     * @var float|int $value
+     * MUST be a float, int or 'U' (string) for unknown.
+     *
+     * @var float|int|string $value
      */
     private $value;
 
@@ -97,42 +99,88 @@ class PerformanceDataLine
      */
     private function parseValueWithUnit($valueWithUnit)
     {
-        $pattern = '/^\s*([-0-9.]+)\s*([A-Z%]+)?\s*$/i';
-
-        if (!preg_match($pattern, $valueWithUnit, $matches)) {
-            throw new \InvalidArgumentException(
-                'Invalid value with unit of measurement supplied: '
-                . var_export($valueWithUnit, true)
-            );
-        }
-
-        $value = $matches[0];
-
-        // Set the value.
-        if (strpos($value, '.') >= 0) {
-            $this->setValue((float) $value);
+        if ($valueWithUnit === static::VALUE_UNKNOWN) {
+            $this->setValue(static::VALUE_UNKNOWN);
+            $this->setUnitOfMeasurement('');
         } else {
-            $this->setValue((int) $value);
-        }
+            $pattern = '/^\s*([-0-9.]+)\s*([A-Z%]+)?\s*$/i';
 
-        // Set the unit of measurement.
-        if (count($matches) === 2) {
-            $uom = $matches[1];
-
-            $allowedUnits = array_map(
-                'strtolower',
-                static::getAllowedUnitsOfMeasurement()
-            );
-
-            if (!in_array(strtolower($uom), $allowedUnits, true)) {
+            if (preg_match($pattern, $valueWithUnit, $matches) !== 1) {
                 throw new \InvalidArgumentException(
-                    'Invalid unit of measurement supplied: '
-                    . var_export($uom, true)
+                    'Invalid value with unit of measurement supplied: '
+                    . var_export($valueWithUnit, true)
                 );
             }
-        } else {
-            $this->setUnitOfMeasurement(static::UOM_UNKNOWN);
+
+            $value = $matches[0];
+
+            // Set the value.
+            if (strpos($value, '.') >= 0) {
+                $this->setValue((float)$value);
+            } else {
+                $this->setValue((int)$value);
+            }
+
+            // Set the unit of measurement.
+            if (count($matches) === 2) {
+                $uom = $matches[1];
+
+                $allowedUnits = array_map(
+                    'strtolower',
+                    static::getAllowedUnitsOfMeasurement()
+                );
+
+                if (!in_array(strtolower($uom), $allowedUnits, true)) {
+                    throw new \InvalidArgumentException(
+                        'Invalid unit of measurement supplied: '
+                        . var_export($uom, true)
+                    );
+                }
+
+                $this->setUnitOfMeasurement($uom);
+            } else {
+                $this->setUnitOfMeasurement('');
+            }
         }
+    }
+
+    /**
+     * Create a text version of the performance data line.
+     *
+     * @return string
+     */
+    public function toText()
+    {
+        $label = $this->getLabel();
+        $value = $this->getValue();
+        $uom = $this->getUnitOfMeasurement();
+        $warning = $this->getWarning();
+        $critical = $this->getCritical();
+        $min = $this->getMinimum();
+        $max = $this->getMaximum();
+
+        // Double single quote to escape single quote.
+        $label = str_replace("'", "''", $label);
+
+        $warning = ($warning === null) ? 'null' : $warning;
+        $critical = ($critical === null) ? 'null' : $critical;
+
+        // Not necessary for percentags to supply a min and max.
+        $min = ($uom === '%') ? static::VALUE_UNKNOWN : $min;
+        $max = ($uom === '%') ? static::VALUE_UNKNOWN : $max;
+
+        return "'{$label}'={$value}{$uom};{$warning};{$critical};{$min};{$max}";
+    }
+
+    /**
+     * Magic method which returns the text version when the object is being cast
+     * to string.
+     *
+     * @return string
+     */
+    public function __toString()
+    {
+        return $this->toText();
     }
 
     /**
@@ -142,9 +190,7 @@ class PerformanceDataLine
      */
     private static function getAllowedUnitsOfMeasurement()
     {
-        return array(
-            static::UOM_UNKNOWN, 's', 'us', 'ms', '%', 'KB', 'MB', 'TB', 'c'
-        );
+        return array('s', 'us', 'ms', '%', 'KB', 'MB', 'TB', 'c');
     }
 
     /**
@@ -203,7 +249,7 @@ class PerformanceDataLine
      */
     private function setLabel($label)
     {
-        $pattern = '/^[^\'=]+$/';
+        $pattern = '/^[^=]+$/';
 
         if (!is_string($label) || preg_match($pattern, $label) !== 1) {
             throw new \InvalidArgumentException(
@@ -326,7 +372,7 @@ class PerformanceDataLine
     /**
      * Get the value of the measured performance data line.
      *
-     * @return float|int
+     * @return float|int|string
      * @throws \LogicException When value is not set.
      */
     public function getValue()
@@ -341,13 +387,16 @@ class PerformanceDataLine
     /**
      * Set the value of the measured performance data line.
      *
-     * @param float|int $value
+     * @param float|int|string $value
      * @return PerformanceDataLine
      * @throws \InvalidArgumentException When $value is invalid.
      */
     private function setValue($value)
     {
-        if (!is_float($value) && !is_int($value)) {
+        if (!is_float($value)
+            && !is_int($value)
+            && $value !== static::VALUE_UNKNOWN
+        ) {
             throw new \InvalidArgumentException(
                 'Invalid value supplied, got: ' . var_export($value, true)
             );
