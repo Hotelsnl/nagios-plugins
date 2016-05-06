@@ -9,7 +9,7 @@
 namespace HotelsNL\Nagios\Response\Diagnostic\PerformanceData;
 
 /**
- * The class whichi represents a line of performance data.
+ * The class which represents a line of performance data.
  */
 class PerformanceDataLine
 {
