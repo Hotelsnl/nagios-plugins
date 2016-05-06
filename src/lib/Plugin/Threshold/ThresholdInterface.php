@@ -14,6 +14,13 @@ namespace HotelsNL\Nagios\Plugin\Threshold;
 interface ThresholdInterface
 {
     /**
+     * Get the value of the threshold which will meet the threshold itself.
+     *
+     * @return int
+     */
+    public function getThresholdValue();
+
+    /**
      * Whether a value meets a threshold.
      *
      * @param int|float $value

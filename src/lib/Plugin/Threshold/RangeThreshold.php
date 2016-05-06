@@ -142,6 +142,16 @@ class RangeThreshold implements ThresholdInterface
     }
 
     /**
+     * Get the value of the threshold which will meet the threshold itself.
+     *
+     * @return int
+     */
+    public function getThresholdValue()
+    {
+        return $this->getEnd();
+    }
+
+    /**
      * Get the end of the range.
      *
      * @return int

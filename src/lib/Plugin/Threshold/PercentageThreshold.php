@@ -80,6 +80,16 @@ class PercentageThreshold implements ThresholdInterface
     }
 
     /**
+     * Get the value of the threshold which will meet the threshold itself.
+     *
+     * @return int
+     */
+    public function getThresholdValue()
+    {
+        return $this->getPercentage();
+    }
+
+    /**
      * Get the percentage which the threshold holds.
      *
      * @return int

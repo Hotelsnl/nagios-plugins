@@ -269,6 +269,46 @@ abstract class PluginAbstract implements PluginInterface
     }
 
     /**
+     * Check if a value matches one of the critical thresholds.
+     *
+     * @param int|float $value
+     * @return bool
+     */
+    protected function meetsOneOfCriticalThresholds($value)
+    {
+        $rv = false;
+
+        foreach ($this->getCriticalThresholds() as $threshold) {
+            if ($threshold->meetsThreshold($value)) {
+                $rv = true;
+                break;
+            }
+        }
+
+        return $rv;
+    }
+
+    /**
+     * Check if a value matches one of the warning thresholds.
+     *
+     * @param int|float $value
+     * @return bool
+     */
+    protected function meetsOneOfWarningThresholds($value)
+    {
+        $rv = false;
+
+        foreach ($this->getWarningThresholds() as $threshold) {
+            if ($threshold->meetsThreshold($value)) {
+                $rv = true;
+                break;
+            }
+        }
+
+        return $rv;
+    }
+
+    /**
      * Parse the command line options.
      *
      * @return void
@@ -453,6 +493,40 @@ abstract class PluginAbstract implements PluginInterface
      * @return void
      */
     abstract protected function registerPluginOptions();
+
+    /**
+     * Get the first critical threshold.
+     *
+     * @return null|ThresholdInterface
+     */
+    protected function getFirstCriticalThreshold()
+    {
+        $rv = null;
+        $thresholds = $this->getCriticalThresholds();
+
+        if (count($thresholds) > 0) {
+            $rv = $thresholds[0];
+        }
+
+        return $rv;
+    }
+
+    /**
+     * Get the first warning threshold.
+     *
+     * @return null|ThresholdInterface
+     */
+    protected function getFirstWarningThreshold()
+    {
+        $rv = null;
+        $thresholds = $this->getWarningThresholds();
+
+        if (count($thresholds) > 0) {
+            $rv = $thresholds[0];
+        }
+
+        return $rv;
+    }
 
     /**
      * Get the thresholds to mark a check as critical.
