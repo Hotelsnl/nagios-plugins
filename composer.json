@@ -16,7 +16,7 @@
     },
     "autoload": {
         "psr-4": {
-            "HotelsNL\\Nagios\\": "src"
+            "HotelsNL\\Nagios\\": "src/lib"
         }
     }
 }
